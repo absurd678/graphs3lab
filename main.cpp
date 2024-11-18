@@ -4,19 +4,114 @@
 #include <vector>
 #include <cstdlib>
 #include <string.h>
-
+#include <vector>
+#include <algorithm>
+#include <cmath>
 using namespace std;
 
-struct Location{
-    int x;
-    int y;
+enum class HeuristicType{Manhattan, Chebyshev, Euclidean};
+
+struct Location {
+    int x; // Координата X
+    int y; // Координата Y
+
+    Location(int xCoord, int yCoord) : x(xCoord), y(yCoord) {}
+    // Оператор сравнения для упрощения работы с приоритетами
+    bool operator==(const Location& other) const {
+        return x == other.x && y==other.y; 
+    }
 };
 
-// Элемент списка
-struct Open_set {
-    Location* point = NULL;
-    Open_set* next = NULL;
+struct Node {
+    Location* location; // Указатель на структуру Location
+    int priority;       // Приоритет (вес ребра)
+
+    Node(Location* loc, int prio) : location(loc), priority(prio) {}
+
+    // Оператор сравнения для упрощения работы с приоритетами
+    bool operator<(const Node& other) const {
+        return priority > other.priority; // Чем меньше вес - тем выше приоритет
+    }
 };
+
+class PriorityQueue {
+private:
+    std::vector<Node> heap; // Вектор для хранения элементов очереди
+
+public:
+    // Добавить новую вершину с заданным приоритетом
+    void put(Location* loc, int priority) {
+        Node newNode(loc, priority);
+        heap.push_back(newNode); // Добавляем элемент в конец
+        std::push_heap(heap.begin(), heap.end()); // Перестраиваем кучу
+    }
+
+    // Достать первую вершину (элемент с наивысшим приоритетом)
+    Location* get() {
+        if (heap.empty()) {
+            return nullptr; // Если очередь пуста, возвращаем nullptr
+        }
+        std::pop_heap(heap.begin(), heap.end()); // Перемещаем наивысший элемент в конец
+        Node topNode = heap.back(); // Сохраняем его
+        heap.pop_back(); // Удаляем его из кучи
+        return topNode.location; // Возвращаем указатель на Location
+    }
+
+    // Проверка на пустоту очереди
+    bool isEmpty() const {
+        return heap.empty();
+    }
+};
+
+// Функция для получения соседей вершины current
+std::vector<Location*> neighbours(int** Graph, int rows, int cols, Location* current, HeuristicType heuristic) {
+    std::vector<Location*> result;
+    // Определяем возможные направления для всех 8 соседей
+    int directions[8][2] = {
+        {-1, 0},  // вверх
+        {1, 0},   // вниз
+        {0, -1},  // влево
+        {0, 1},   // вправо
+        {-1, -1}, // верхний левый угол (диагональ)
+        {-1, 1},  // верхний правый угол (диагональ)
+        {1, -1},  // нижний левый угол (диагональ)
+        {1, 1}    // нижний правый угол (диагональ)
+    };
+
+    // Определяем соседей в зависимости от выбранной эвристики
+    if (heuristic == HeuristicType::Manhattan) {
+        // Добавить соседей в соответствии с манхеттенской эвристикой
+        
+    } else if (heuristic == HeuristicType::Chebyshev || heuristic == HeuristicType::Euclidean) {
+        // Добавить соседей в соответствии с чебышевской эвристикой || евклидовой
+        // Проходим по всем направлениям
+        for (int i = 0; i < 8; ++i) {
+            int newX = current->x + directions[i][0];
+            int newY = current->y + directions[i][1];
+
+            // Проверяем границы
+            if (newX >= 0 && newX < rows && newY >= 0 && newY < cols) {
+                result.emplace_back(newX, newY); // Добавляем соседа в результат
+            }
+        }
+    }
+
+    return result; // Возвращаем массив соседей
+}
+
+int cost(int** Graph, Location* current, Location* neighbor, HeuristicType heuristic) {
+    if (heuristic == HeuristicType::Manhattan) {
+        // Вычислить стоимость для манхеттенской эвристики
+        return abs(current->x - neighbor->x) + abs(current->y - neighbor->y);
+    } else if (heuristic == HeuristicType::Chebyshev) {
+        // Вычислить стоимость для чебышевской эвристики
+        return max(abs(current->x - neighbor->x), abs(current->y - neighbor->y));
+    } else if (heuristic == HeuristicType::Euclidean) {
+        // Вычислить стоимость для евклидовой эвристики
+        return sqrt(pow(current->x - neighbor->x, 2) + pow(current->y - neighbor->y, 2));
+    }
+    return 1; // или другая стоимость по умолчанию
+}
 
 
 void fillUp(int* array, int Size, int value)
@@ -81,122 +176,39 @@ int** readGraphFromFile(const char *filename, int &size) {
     return graph; // Return the created graph
 }
 
-// Ф У Н К Ц И И   Д Л Я   С П И С К А
-void make(int a, Open_set*& end, Open_set*& head) //  Добавление нового элемента
-{
-    Open_set* ptr = new Open_set; // Новый элемент
-    if (!head) head = ptr; // Если это первый элемент
-    else { end->next = ptr; } // У конца появилось продолжение
-    ptr->data = a;
-    end = ptr; // Делаем этот элемент последним
-    ptr->next = NULL; // Следующих элементов списка нет
-} // make
-
-int findElem(int a, Open_set* head) // Найти элемент в списке
-{
-    Open_set* ptr = head;
-    int counter = 0;
-    while (ptr)
-    {
-        if (ptr->data == a) return counter;
-        ptr = ptr->next;
-        counter++;
-    }
-    return -1;
-} // findElem
-void print(Open_set* head)  // Печать всего списка
-{
-    Open_set* ptr = head;
-    if (!ptr) cout << "Список пуст";
-    while (ptr)
-    {
-        cout << "\t" << ptr->data;  // Считывание данного
-        ptr = ptr->next; // Переход к следующему
-    }
-    cout << endl;
-} // print
-
-int count_size(Open_set* head) // Посчитать размер списка
-{
-    int counter = 0;
-    while (head)
-    {
-        counter++;
-        head = head->next;
-    } // while
-    return counter;
-} // counter_size
-
-void Delete(Open_set*& head, int index) { // Удаление элемента по индексу
-    Open_set* ptr = head;
-    for (int i = 0; i < index - 1; i++) {
-        ptr = ptr->next;
-    } // for i
-    if (index == 0) {
-        head = ptr->next;
-        delete ptr;
-    } // if
-    else
-    {
-        Open_set* ptr2 = ptr->next;
-        ptr->next = ptr->next->next;
-        delete ptr2;
-    } // else
-} // Delete
-
-void delList(Open_set*& head) // Удаление всего списка
-{
-    Open_set* ptr;
-    while (head) // Удаление, начинающееся с "головы"
-    {
-        ptr = head->next;
-        delete head;
-        head = ptr;
-    } // while
-    head = NULL;
-} // delList
-
-void diykstra(int *shortest, int *pred, int **Graph, Open_set*& head, Location* start, Location* dest,
- int size) 
+void diykstra(int **shortest, Location*** pred, int **Graph, Location* start, Location* dest,
+ int size, HeuristicType heuristic) 
 {    
     Location* w = start; // Вершина, путь к которой самый короткий
-    // Ставим дефолтные значения
-    fillUp(pred, size, -1);
-    fillUp(shortest, size, INT_MAX);
-    shortest[start->x + start->y] = 0;
+    // создать очерередь
+    PriorityQueue frontier = PriorityQueue();
+    frontier.put(start, Graph[start->x][start->y]);
 
-    while (head) // пока список Q не пуст
+    shortest[start->x][start->y] = 0;
+
+    while (!frontier.isEmpty()) // не все 
     {
-        int min = INT_MAX;
-        for (int j = 0; j < size; j++) { // Поиск вершины, имеющей самый короткий путь от последней, удаленной из Q
-            if (shortest[j] < min && findElem(j, head)!=-1) { // Если путь до j самый короткий и вершина j есть в Q
-                    min = shortest[j];
-                    w = j;
-            } // if
-        } // for j
+        Location* current = frontier.get();
 
-        for (int j = 0; j < size; j++) { // Ищем вершины, смежные w-й 
-            if (Graph[w][j] > 0) {
-                cout << w << " -> " << j << " ; ";
-                //смежная вершина v и вес ребра (w, v)
-                int v = j, weight = Graph[w][j];
-                //Relax
-                //путь (w, v) короче, чем записанный ранее в shortest -> обновить shortest и pred
-                if (shortest[w] + weight < shortest[v]) {
-                    shortest[v] = shortest[w] + weight;
-                    pred[v] = w;
-                    cout << "\nshortest: " << endl;
-                    print_arr(shortest, size);
-                    cout << "pred: " << endl;
-                    print_arr(pred, size);
-                    cout << "\n\n";
-                } // if
-            } // if
-        } // for j
-        int i = findElem(w, head);
-        Delete(head, i);         // Удаление вершины w из Q
+        if (current == dest)
+            break;
+
+        vector<Location*> neighArray = neighbours(Graph, size, size, current, heuristic);
+        for (const auto& neighbor : neighArray){
+           
+            int new_cost = shortest[current->x][current->y] + cost(Graph, current, neighbor, heuristic);
+            if (new_cost < shortest[neighbor->x][neighbor->y]){
+
+                shortest[neighbor->x][neighbor->y] = new_cost;
+                frontier.put(neighbor, new_cost);
+                pred[neighbor->x][neighbor->y] = current;
+            
+            }
+        }
+        
     } // while
 } // void deikstra
+
 /*
 void a_star(double *g_array, double *f_array, int *pred, int **Graph, Open_set*& head, int start, int dest, int size,
  double (*heuristic)(int, int, int, int)) 
@@ -265,28 +277,44 @@ int main(int argc, char *argv[])
         }
     }
 
-    int source, dest, size;
+    int size;
+    int** shortest = new int*[size];
+    Location*** pred = new Location**[size];
+
     int** graph = readGraphFromFile(inputFilename, size);
     for (int i = 0; i < size; i++){
+
+        shortest[i] = new int[size];
+        pred[i] = new Location*[size];
+
         for (int j = 0; j < size; j++){
             cout << graph[i][j] << " ";
+            shortest[i][j] = INT_MAX;
+            pred[i][j] = NULL;
         }
         cout << endl;
     }
     
-    int* shortest = new int[size*size];
-    int* pred = new int[size*size];
-    source = 0;     // Начала ставим сами
-    dest = size-1;
+    Location source(0,0);     // Начала ставим сами
+    Location dest(size,size);
 
-    Open_set* Qhead = NULL; Open_set* Qend = NULL;
-    for (int i = 0; i < size; i++) make(i, Qend, Qhead);
+    diykstra(shortest, pred, graph, &source, &dest, size, HeuristicType::Manhattan);
 
-    diykstra(shortest, pred, graph, Qhead, source, size);
-
-    print_arr(shortest, size);
+    cout<<"shortest: "<<endl;
+    for (int i = 0; i < size; i++){
+        for (int j = 0; j < size; j++){
+            cout << shortest[i][j] << " ";
+        }
+        cout<<endl;
+    }
     cout<<endl;
-    print_arr(pred, size);
+    cout<<"pred: "<<endl;
+    for (int i = 0; i < size; i++){
+        for (int j = 0; j < size; j++){
+            cout << "("<<pred[i][j]->x <<", "<< pred[i][j]->y<<")"<< " ";
+        }
+        cout<<endl;
+    }
 
     return EXIT_SUCCESS;
 }
