@@ -255,11 +255,9 @@ void a_star(double *g_array, double *f_array, int *pred, int **Graph, Open_set*&
 */
 
 //
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     setlocale(LC_ALL, "Russian");
-    if (argc < 2)
-    {
+    if (argc < 2) {
         fprintf(stderr, "Использование: %s <имя входного файла> [-o <имя выходного файла>]\n", argv[0]);
         return EXIT_FAILURE;
     }
@@ -267,57 +265,59 @@ int main(int argc, char *argv[])
     const char *inputFilename = argv[1];
     const char *outputFilename = "output.txt";
 
-    // Проверка на наличие параметра -o для имени выходного файла
-    for (int i = 2; i < argc; i++)
-    {
-        if (strcmp(argv[i], "-o") == 0 && i + 1 < argc)
-        {
+    for (int i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
             outputFilename = argv[i + 1];
             break;
         }
     }
 
     int size;
+    int** graph = readGraphFromFile(inputFilename, size);
+    
+    // Теперь size корректно инициализировано
     int** shortest = new int*[size];
     Location*** pred = new Location**[size];
 
-    int** graph = readGraphFromFile(inputFilename, size);
-    for (int i = 0; i < size; i++){
-
+    for (int i = 0; i < size; i++) {
         shortest[i] = new int[size];
         pred[i] = new Location*[size];
 
-        for (int j = 0; j < size; j++){
+        for (int j = 0; j < size; j++) {
             cout << graph[i][j] << " ";
             shortest[i][j] = INT_MAX;
-            pred[i][j] = NULL;
+            pred[i][j] = new Location(-1, -1);
         }
         cout << endl;
     }
     
-    Location source(0,0);     // Начала ставим сами
-    Location dest(size,size);
+    Location source(0, 0);  // Начало
+    Location dest(size - 1, size - 1); // Конечная точка
 
-    diykstra(shortest, pred, graph, &source, &dest, size, HeuristicType::Manhattan);
+    diykstra(shortest, pred, graph, &source, &dest, size, HeuristicType::Manhattan); // Замените 0 на ваш тип эвристики
 
-    cout<<"shortest: "<<endl;
-    for (int i = 0; i < size; i++){
-        for (int j = 0; j < size; j++){
+    cout << "shortest: " << endl;
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
             cout << shortest[i][j] << " ";
         }
-        cout<<endl;
+        cout << endl;
     }
-    cout<<endl;
-    cout<<"pred: "<<endl;
-    for (int i = 0; i < size; i++){
-        for (int j = 0; j < size; j++){
-            cout << "("<<pred[i][j]->x <<", "<< pred[i][j]->y<<")"<< " ";
+    cout << endl;
+
+    cout << "pred: " << endl;
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            if (pred[i][j] != NULL) {
+                cout << "(" << pred[i][j]->x << ", " << pred[i][j]->y << ") ";
+            } else {
+                cout << "NULL ";
+            }
         }
-        cout<<endl;
+        cout << endl;
     }
+
+    // Освободите память (не забудьте сделать это)
 
     return EXIT_SUCCESS;
 }
-
-
-
