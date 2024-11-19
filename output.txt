@@ -1,0 +1,71 @@
+Algorithm: Dijkstra 
+
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: Dijkstra 
+
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: Dijkstra 
+
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0.001 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: Dijkstra 
+
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0.001 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: A* (Manhattan)
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0.001 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: A* (Euclidean)
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0.001 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: A* (Chebyshev)
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: Dijkstra 
+
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: A* (Manhattan)
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: A* (Euclidean)
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+
+Algorithm: A* (Chebyshev)
+Path Length: 9
+Percent Visited: 100%
+Time Taken: 0 seconds 
+Path: (0, 0) (1, 0) (0, 1) (2, 0) (1, 1) (0, 2) (2, 1) (1, 2) (2, 2) 
+

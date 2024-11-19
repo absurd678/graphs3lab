@@ -1,323 +1,393 @@
+//  g++ -o pathfinding main.cpp
+//  ./pathfinding random_heights.bin -o output.txt
+
 #include <iostream>
 #include <fstream>
-#include <string>
 #include <vector>
-#include <cstdlib>
-#include <string.h>
-#include <vector>
-#include <algorithm>
+#include <queue>
 #include <cmath>
+#include <limits>
+#include <ctime>
+#include <string>
+
 using namespace std;
 
-enum class HeuristicType{Manhattan, Chebyshev, Euclidean};
-
-struct Location {
-    int x; // Координата X
-    int y; // Координата Y
-
-    Location(int xCoord, int yCoord) : x(xCoord), y(yCoord) {}
-    // Оператор сравнения для упрощения работы с приоритетами
-    bool operator==(const Location& other) const {
-        return x == other.x && y==other.y; 
-    }
-};
-
+// Структура для хранения координат
 struct Node {
-    Location* location; // Указатель на структуру Location
-    int priority;       // Приоритет (вес ребра)
+    int x, y;
+    int cost; // Стоимость пути до этой клетки
+    int heuristic; // Эвристическая оценка
+    int totalCost; // Общая стоимость (cost + heuristic)
 
-    Node(Location* loc, int prio) : location(loc), priority(prio) {}
-
-    // Оператор сравнения для упрощения работы с приоритетами
-    bool operator<(const Node& other) const {
-        return priority > other.priority; // Чем меньше вес - тем выше приоритет
+    // Оператор сравнения для приоритетной очереди
+    bool operator>(const Node& other) const {
+        return totalCost > other.totalCost;
     }
 };
 
-class PriorityQueue {
-private:
-    std::vector<Node> heap; // Вектор для хранения элементов очереди
 
-public:
-    // Добавить новую вершину с заданным приоритетом
-    void put(Location* loc, int priority) {
-        Node newNode(loc, priority);
-        heap.push_back(newNode); // Добавляем элемент в конец
-        std::push_heap(heap.begin(), heap.end()); // Перестраиваем кучу
+// Функция для чтения высот из бинарного файла
+/*
+vector<vector<int>> readHeights(const string& filename, int& width, int& height) {
+    cout << "Зашли в readHeights" << endl;
+
+    ifstream file(filename, ios::binary);
+    if (!file) {
+        throw runtime_error("Cannot open file");
     }
 
-    // Достать первую вершину (элемент с наивысшим приоритетом)
-    Location* get() {
-        if (heap.empty()) {
-            return nullptr; // Если очередь пуста, возвращаем nullptr
-        }
-        std::pop_heap(heap.begin(), heap.end()); // Перемещаем наивысший элемент в конец
-        Node topNode = heap.back(); // Сохраняем его
-        heap.pop_back(); // Удаляем его из кучи
-        return topNode.location; // Возвращаем указатель на Location
+    // Читаем ширину и высоту
+    if (!file.read(reinterpret_cast<char*>(&width), sizeof(int))) {
+        throw runtime_error("Error reading width");
+    }
+    if (!file.read(reinterpret_cast<char*>(&height), sizeof(int))) {
+        throw runtime_error("Error reading height");
     }
 
-    // Проверка на пустоту очереди
-    bool isEmpty() const {
-        return heap.empty();
+    // Проверяем корректность значений
+    if (width <= 0 || height <= 0) {
+        throw runtime_error("Invalid width or height");
     }
-};
 
-// Функция для получения соседей вершины current
-std::vector<Location*> neighbours(int** Graph, int rows, int cols, Location* current, HeuristicType heuristic) {
-    std::vector<Location*> result;
-    // Определяем возможные направления для всех 8 соседей
-    int directions[8][2] = {
-        {-1, 0},  // вверх
-        {1, 0},   // вниз
-        {0, -1},  // влево
-        {0, 1},   // вправо
-        {-1, -1}, // верхний левый угол (диагональ)
-        {-1, 1},  // верхний правый угол (диагональ)
-        {1, -1},  // нижний левый угол (диагональ)
-        {1, 1}    // нижний правый угол (диагональ)
-    };
+    vector<vector<int>> heights(height, vector<int>(width));
 
-    // Определяем соседей в зависимости от выбранной эвристики
-    if (heuristic == HeuristicType::Manhattan) {
-        // Добавить соседей в соответствии с манхеттенской эвристикой
-        
-    } else if (heuristic == HeuristicType::Chebyshev || heuristic == HeuristicType::Euclidean) {
-        // Добавить соседей в соответствии с чебышевской эвристикой || евклидовой
-        // Проходим по всем направлениям
-        for (int i = 0; i < 8; ++i) {
-            int newX = current->x + directions[i][0];
-            int newY = current->y + directions[i][1];
-
-            // Проверяем границы
-            if (newX >= 0 && newX < rows && newY >= 0 && newY < cols) {
-                result.emplace_back(newX, newY); // Добавляем соседа в результат
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            if (!file.read(reinterpret_cast<char*>(&heights[i][j]), sizeof(int))) {
+                throw runtime_error("Error reading height data");
             }
         }
     }
 
-    return result; // Возвращаем массив соседей
+    cout << "end of reading" << endl;
+    return heights;
+}
+*/
+vector<vector<int>> readHeights(const string& filename, int& width, int& height) {
+    cout << "Зашли в readHeights" << endl;
+
+    ifstream file(filename);
+    if (!file) {
+        throw runtime_error("Cannot open file");
+    }
+
+    // Читаем ширину и высоту
+    if (!(file >> width >> height)) {
+        throw runtime_error("Error reading width and height");
+    }
+
+    // Проверяем корректность значений
+    if (width <= 0 || height <= 0) {
+        throw runtime_error("Invalid width or height");
+    }
+
+    vector<vector<int>> heights(height, vector<int>(width));
+
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            if (!(file >> heights[i][j])) {
+                throw runtime_error("Error reading height data");
+            }
+        }
+    }
+
+    cout << "end of reading" << endl;
+    return heights;
 }
 
-int cost(int** Graph, Location* current, Location* neighbor, HeuristicType heuristic) {
-    if (heuristic == HeuristicType::Manhattan) {
-        // Вычислить стоимость для манхеттенской эвристики
-        return abs(current->x - neighbor->x) + abs(current->y - neighbor->y);
-    } else if (heuristic == HeuristicType::Chebyshev) {
-        // Вычислить стоимость для чебышевской эвристики
-        return max(abs(current->x - neighbor->x), abs(current->y - neighbor->y));
-    } else if (heuristic == HeuristicType::Euclidean) {
-        // Вычислить стоимость для евклидовой эвристики
-        return sqrt(pow(current->x - neighbor->x, 2) + pow(current->y - neighbor->y, 2));
+// Функция для записи результатов в текстовый файл
+void writeResults(const string& filename, const string& algorithm, int pathLength, double percentVisited, double timeTaken, const vector<Node>& path) {
+    
+    cout << "Зашли в writeResults" << endl;
+    
+    ofstream outFile(filename, ios::app);
+    if (!outFile) {
+        throw runtime_error("Cannot open output file");
     }
-    return 1; // или другая стоимость по умолчанию
+    
+    outFile << "Algorithm: " << algorithm << "\n";
+    outFile << "Path Length: " << pathLength << "\n";
+    outFile << "Percent Visited: " << percentVisited << "%\n";
+    outFile << "Time Taken: " << timeTaken << " seconds \n";
+    outFile << "Path: ";
+    for (const auto& node : path) {
+        outFile << "(" << node.x << ", " << node.y << ") ";
+    }
+    outFile << "\n\n";
 }
 
-
-void fillUp(int* array, int Size, int value)
-{
-    for (int i = 0; i < Size; i++)
-    {
-        array[i] = value;
-    } // for i
-} // for fillUp
-void print_arr(int* arr, int N) {
-    for (int i = 0; i < N; i++) {
-        cout << "\t"<< arr[i] << " ";
-    }
-    cout << endl;
+// Эвристики
+int chebyshevHeuristic(int x1, int y1, int x2, int y2) {
+    return max(abs(x1 - x2), abs(y1 - y2));
 }
 
+int euclideanHeuristic(int x1, int y1, int x2, int y2) {
+    return static_cast<int>(sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2)));
+}
 
+int manhattanHeuristic(int x1, int y1, int x2, int y2) {
+    return abs(x1 - x2) + abs(y1 - y2);
+}
 
-// Чтение графа из бинарного файла
-int** readGraphFromFile(const char *filename, int &size) {
-    ifstream file(filename, ios::binary);
-    if (!file.is_open()) {
-        perror("Не удалось открыть файл");
-        exit(EXIT_FAILURE);
+// Алгоритм Дейкстры
+void dijkstra(const vector<vector<int>>& heights, int startX, int startY, int goalX, int goalY, vector<Node>& path) {
+
+    cout << "Зашли в dijkstra" << endl;
+
+    int height = heights.size();
+    int width = heights[0].size();
+    
+    vector<vector<int>> cost(height, vector<int>(width, numeric_limits<int>::max()));
+    vector<vector<bool>> visited(height, vector<bool>(width, false));
+    
+    priority_queue<Node, vector<Node>, greater<Node>> pq;
+    
+    pq.push({startX, startY, 0, 0, 0});
+    cost[startY][startX] = 0;
+
+    while (!pq.empty()) {
+        Node current = pq.top();
+        pq.pop();
+
+        if (visited[current.y][current.x]) continue;
+        visited[current.y][current.x] = true;
+
+        // Если достигли цели
+        if (current.x == goalX && current.y == goalY) {
+            // Восстановление пути
+            path.push_back(current);
+            break;
+        }
+
+        // Проверка соседей
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                if (abs(dy) == abs(dx)) continue; // Исключаем диагонали
+
+                int newX = current.x + dx;
+                int newY = current.y + dy;
+
+                if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+                    int newCost = current.cost + heights[newY][newX];
+                    if (newCost < cost[newY][newX]) {
+                        cost[newY][newX] = newCost;
+                        pq.push({newX, newY, newCost, 0});
+                    }
+                }
+            }
+        }
+        
+        // Добавление текущего узла в путь
+        path.push_back(current);
+    }
+}
+
+// Алгоритм A*
+void aStar(const vector<vector<int>>& heights, int startX, int startY, int goalX, int goalY, vector<Node>& path, int (*heuristic)(int, int, int, int)) {
+    
+    cout << "Зашли в aStar" << endl;
+    
+    int height = heights.size();
+    int width = heights[0].size();
+
+    vector<vector<int>> cost(height, vector<int>(width, numeric_limits<int>::max()));
+    vector<vector<bool>> visited(height, vector<bool>(width, false));
+
+    priority_queue<Node, vector<Node>, greater<Node>> pq;
+
+    pq.push({startX, startY, 0, heuristic(startX, startY, goalX, goalY), 0});
+    cost[startY][startX] = 0;
+
+    while (!pq.empty()) {
+        Node current = pq.top();
+        pq.pop();
+
+        if (visited[current.y][current.x]) continue;
+        visited[current.y][current.x] = true;
+
+        // Если достигли цели
+        if (current.x == goalX && current.y == goalY) {
+            // Восстановление пути
+            path.push_back(current);
+            break;
+        }
+
+        // Проверка соседей
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                if (abs(dy) == abs(dx)) continue; // Исключаем диагонали
+
+                int newX = current.x + dx;
+                int newY = current.y + dy;
+                
+                
+
+                if (newX >= 0 && newX < width && newY >= 0 && newY < height && !visited[newY][newX]) {
+                    int newCost = current.cost + heights[newY][newX];
+                    if (newCost < cost[newY][newX]) {
+                        cost[newY][newX] = newCost;
+                        pq.push({newX, newY, newCost, heuristic(newX, newY, goalX, goalY)});
+                    }
+                }
+            }
+        }
+
+        // Добавление текущего узла в путь
+        path.push_back(current);
+    }
+}
+
+// Функция для заполнения файла случайными значениями
+void fillRandom(const string& filename, int width, int height) {
+
+    cout << "Зашли в fillRandom" << endl;
+
+    ofstream file(filename, ios::binary);
+    if (!file) {
+        throw runtime_error("Cannot open file for writing \n");
     }
 
-    bool isBinary = false;
-    string filenameStr(filename);
-    if (filenameStr.find(".bl") != string::npos) {
-        isBinary = true;
+    file.write(reinterpret_cast<const char*>(&width), sizeof(int));
+    file.write(reinterpret_cast<const char*>(&height), sizeof(int));
+
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            int value = rand() % 100; // Случайные значения от 0 до 99
+            file.write(reinterpret_cast<const char*>(&value), sizeof(int));
+        }
     }
+}
+
+// Функция для ручного ввода значений
+void fillManual(const string& filename, int width, int height) {
+
+    cout << "Зашли в fillManual" << endl;
+
+    ofstream file(filename, ios::binary);
+    if (!file) {
+        throw runtime_error("Cannot open file for writing \n");
+    }
+
+    file.write(reinterpret_cast<const char*>(&width), sizeof(int));
+    file.write(reinterpret_cast<const char*>(&height), sizeof(int));
+
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            int value;
+            cout << "Enter height for cell (" << i << ", " << j << "): ";
+            cin >> value;
+            file.write(reinterpret_cast<const char*>(&value), sizeof(int));
+        }
+    }
+}
+
+int main(int argc, char* argv[]) {
+    
+    if (argc < 2) {
+        cerr << "Usage: " << argv[0] << " <input_file> [-o output_file]" << endl;
+        return 1;
+    }
+
+    string inputFile = argv[1];
+    string outputFile = "output.txt"; // По умолчанию
+
+    // Обработка ключа -o
+    for (int i = 2; i < argc; ++i) {
+        if (string(argv[i]) == "-o" && i + 1 < argc) {
+            outputFile = argv[++i];
+        }
+    }
+    /*
+    // Выбор метода заполнения
+    cout << "Выберите метод заполнения:\n1. Случайные значения\n2. Ручной ввод\nВведите номер: ";
+    int choice;
+    cin >> choice;
 
     int width, height;
-    if (isBinary) {
-        file.read(reinterpret_cast<char *>(&width), sizeof(int));
-        file.read(reinterpret_cast<char *>(&height), sizeof(int));
+    if (choice == 1) {
+        cout << "Введите ширину и высоту: ";
+        cin >> width >> height;
+        fillRandom(inputFile, width, height);
+    } else if (choice == 2) {
+        cout << "Введите ширину и высоту: ";
+        cin >> width >> height;
+        fillManual(inputFile, width, height);
     } else {
-        file >> width;
-        file >> height;
+        cerr << "Некорректный выбор!" << endl;
+        return 1;
     }
-    size = width;
-    cout << "width x height = %d x %d" << width << height << endl;
+    */
 
-    int** graph = new int*[height];
-    
-    int capacity;
-    for (int i = 0; i < width; i++) {
-        graph[i] = new int[height];
-        for (int j = 0; j < height; j++) {
-            if (isBinary && file.read(reinterpret_cast<char *>(&capacity), sizeof(int))) {
-                graph[i][j] = capacity; // Add edge
-                
-            } else {
-                file >> capacity;
-                graph[i][j] = capacity; // Add edge
-                
-            }
-        }
-    }
+    try {
+        // Чтение высот из файла
+        int width, height;
+        vector<vector<int>> heights = readHeights(inputFile, width, height);
 
-    file.close();
-    return graph; // Return the created graph
-}
+        // Пример вызова алгоритмов
+        vector<Node> path;
 
-void diykstra(int **shortest, Location*** pred, int **Graph, Location* start, Location* dest,
- int size, HeuristicType heuristic) 
-{    
-    Location* w = start; // Вершина, путь к которой самый короткий
-    // создать очерередь
-    PriorityQueue frontier = PriorityQueue();
-    frontier.put(start, Graph[start->x][start->y]);
+        clock_t start = clock();
+        dijkstra(heights, 0, 0, width - 1, height - 1, path);
+        clock_t end = clock();
 
-    shortest[start->x][start->y] = 0;
+        double timeTakenDijkstra = double(end - start) / CLOCKS_PER_SEC;
 
-    while (!frontier.isEmpty()) // не все 
-    {
-        Location* current = frontier.get();
+        // Подсчет длины пути и процент просмотренных вершин
+        int pathLengthDijkstra = path.size();
+        double percentVisitedDijkstra = (pathLengthDijkstra / static_cast<double>(width * height)) * 100;
 
-        if (current == dest)
-            break;
+        // Запись результатов в файл
+                writeResults(outputFile, "Dijkstra \n", pathLengthDijkstra, percentVisitedDijkstra, timeTakenDijkstra, path);
 
-        vector<Location*> neighArray = neighbours(Graph, size, size, current, heuristic);
-        for (const auto& neighbor : neighArray){
-           
-            int new_cost = shortest[current->x][current->y] + cost(Graph, current, neighbor, heuristic);
-            if (new_cost < shortest[neighbor->x][neighbor->y]){
+      // Очистка пути для A*
+        path.clear();
 
-                shortest[neighbor->x][neighbor->y] = new_cost;
-                frontier.put(neighbor, new_cost);
-                pred[neighbor->x][neighbor->y] = current;
-            
-            }
-        }
+        // A* с Манхэттенской эвристикой
+        start = clock();
+        aStar(heights, 0, 0, width - 1, height - 1, path, manhattanHeuristic);
+        end = clock();
+
+        double timeTakenAStarManhattan = double(end - start) / CLOCKS_PER_SEC;
+
+        // Подсчет длины пути и процент просмотренных вершин для A*
+        int pathLengthAStarManhattan = path.size();
+        double percentVisitedAStarManhattan = (pathLengthAStarManhattan / static_cast<double>(width * height)) * 100;
+
+        // Запись результатов в файл для A* с Манхэттенской эвристикой
+        writeResults(outputFile, "A* (Manhattan)", pathLengthAStarManhattan, percentVisitedAStarManhattan, timeTakenAStarManhattan, path);
+
+        // Очистка пути для A* с Евклидовой эвристикой
+        path.clear();
         
-    } // while
-} // void deikstra
+        start = clock();
+        aStar(heights, 0, 0, width - 1, height - 1, path, euclideanHeuristic);
+        end = clock();
 
-/*
-void a_star(double *g_array, double *f_array, int *pred, int **Graph, Open_set*& head, int start, int dest, int size,
- double (*heuristic)(int, int, int, int)) 
-{    
-    int w = start; // Вершина, путь к которой самый короткий
-    // Ставим дефолтные значения
-    fillUp(pred, size, -1);
-    fillUp(g_array, size, INT_MAX);
-    g_array[start] = 0;
-    f_array[start] = g_array[start] + heuristic(start, start, dest, dest);
+        double timeTakenAStarEuclidean = double(end - start) / CLOCKS_PER_SEC;
 
-    while (head) // пока список Q не пуст
-    {
-        int min = INT_MAX;
-        for (int j = 0; j < size; j++) { // Поиск вершины, имеющей самый короткий путь от последней, удаленной из Q
-            if (g_array[j] < min && findElem(j, head)!=-1) { // Если путь до j самый короткий и вершина j есть в Q
-                    min = g_array[j];
-                    w = j;
-            } // if
-        } // for j
+        int pathLengthAStarEuclidean = path.size();
+        double percentVisitedAStarEuclidean = (pathLengthAStarEuclidean / static_cast<double>(width * height)) * 100;
 
-        for (int j = 0; j < size; j++) { // Ищем вершины, смежные w-й 
-            if (Graph[w][j] > 0) {
-                cout << w << " -> " << j << " ; ";
-                //смежная вершина v и вес ребра (w, v)
-                int v = j, weight = Graph[w][j];
-                //Relax
-                //путь (w, v) короче, чем записанный ранее в shortest -> обновить shortest и pred
-                if (g_array[w] + weight < g_array[v]) {
-                    g_array[v] = g_array[w] + weight;
-                    pred[v] = w;
-                    cout << "\nshortest: " << endl;
-                    print_arr(g_array, size);
-                    cout << "pred: " << endl;
-                    print_arr(pred, size);
-                    cout << "\n\n";
-                } // if
-            } // if
-        } // for j
-        int i = findElem(w, head);
-        Delete(head, i);         // Удаление вершины w из Q
-    } // while
-} // void deikstra
-*/
+        writeResults(outputFile, "A* (Euclidean)", pathLengthAStarEuclidean, percentVisitedAStarEuclidean, timeTakenAStarEuclidean, path);
 
-//
-int main(int argc, char *argv[]) {
-    setlocale(LC_ALL, "Russian");
-    if (argc < 2) {
-        fprintf(stderr, "Использование: %s <имя входного файла> [-o <имя выходного файла>]\n", argv[0]);
-        return EXIT_FAILURE;
+        // Очистка пути для A* с Чебышёвой эвристикой
+        path.clear();
+
+        start = clock();
+        aStar(heights, 0, 0, width - 1, height - 1, path, chebyshevHeuristic);
+        end = clock();
+
+        double timeTakenAStarChebyshev = double(end - start) / CLOCKS_PER_SEC;
+
+        int pathLengthAStarChebyshev = path.size();
+        double percentVisitedAStarChebyshev = (pathLengthAStarChebyshev / static_cast<double>(width * height)) * 100;
+
+        writeResults(outputFile, "A* (Chebyshev)", pathLengthAStarChebyshev, percentVisitedAStarChebyshev, timeTakenAStarChebyshev, path);
+
+    } catch (const exception& e) {
+        cerr << "Error: " << e.what() << endl;
+        return 1;
     }
 
-    const char *inputFilename = argv[1];
-    const char *outputFilename = "output.txt";
-
-    for (int i = 2; i < argc; i++) {
-        if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
-            outputFilename = argv[i + 1];
-            break;
-        }
-    }
-
-    int size;
-    int** graph = readGraphFromFile(inputFilename, size);
-    
-    // Теперь size корректно инициализировано
-    int** shortest = new int*[size];
-    Location*** pred = new Location**[size];
-
-    for (int i = 0; i < size; i++) {
-        shortest[i] = new int[size];
-        pred[i] = new Location*[size];
-
-        for (int j = 0; j < size; j++) {
-            cout << graph[i][j] << " ";
-            shortest[i][j] = INT_MAX;
-            pred[i][j] = new Location(-1, -1);
-        }
-        cout << endl;
-    }
-    
-    Location source(0, 0);  // Начало
-    Location dest(size - 1, size - 1); // Конечная точка
-
-    diykstra(shortest, pred, graph, &source, &dest, size, HeuristicType::Manhattan); // Замените 0 на ваш тип эвристики
-
-    cout << "shortest: " << endl;
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++) {
-            cout << shortest[i][j] << " ";
-        }
-        cout << endl;
-    }
-    cout << endl;
-
-    cout << "pred: " << endl;
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++) {
-            if (pred[i][j] != NULL) {
-                cout << "(" << pred[i][j]->x << ", " << pred[i][j]->y << ") ";
-            } else {
-                cout << "NULL ";
-            }
-        }
-        cout << endl;
-    }
-
-    // Освободите память (не забудьте сделать это)
-
-    return EXIT_SUCCESS;
+    return 0;
 }
